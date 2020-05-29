@@ -70,8 +70,14 @@ var writePage = ($) => {
     // return [{subcategory, page}] categories
 }
 
-var writeResult = (json) => {
+var writeResultJson = (json) => {
     fs.appendFileSync("./solution.json", JSON.stringify(json));
+    return json;
+    // return [{subcategory, page}] categories
+}
+
+var writeResultJson = (str) => {
+    fs.appendFileSync("./solution.json", str);
     return json;
     // return [{subcategory, page}] categories
 }
@@ -100,8 +106,26 @@ getPageCreditCard = () => {
 var getLinkSubcategory = ($) => {
     subcatpromo = $("#subcatpromo img", "#contentpromolain2");
     
-    let linkSubcategories = [];
-
+    subcategory = _.range(subcatpromo.length);
+    writeResult("[").then( function (){
+        return Promise.reduce(subcategory, function (sequence, subcategory){
+            return sequence.then(function (){ 
+                title = subcatpromo[idx].attribs.title;
+                id = subcatpromo[idx].attribs.id;
+                link = getLinkFromClickAction($, id);
+                writeResult("{'"+title+"':");
+    
+            }, Promise.resolve())        
+                .then(getLinkPages)
+                .then(getDetailPromo)
+            title = subcatpromo[idx].attribs.title;
+            linkSubcategories.push({'title':title, 'link': link});
+        })
+    }.then(function (){
+        writeResult("]")
+    })
+    
+    
     for (let idx=0; idx<subcatpromo.length; idx++){
         title = subcatpromo[idx].attribs.title;
         id = subcatpromo[idx].attribs.id;
@@ -121,9 +145,8 @@ getTotalPage = ($) => {
     return totalPage;
 }
 
-var getLinkPages = (linkSubcategories) => {
-    return Promise.map(linkSubcategories, function (subcategory){
-        return getPage(subcategory.link).then(getTotalPage).then(
+var getLinkPages = (linkSubcategory) => {
+        return getPage(linkSubcategory).then(getTotalPage).then(
             function (totalPages){
                     linkPromos = _.range(totalPage);
                     console.log("sono, ", totalPage);
@@ -133,7 +156,6 @@ var getLinkPages = (linkSubcategories) => {
                     })
                     }
         )
-        })
         
 
     
@@ -193,28 +215,33 @@ var getLinkPromo = ($) => {
 }
 
 getDetailPromo = (linkPromos) => {
-        Promise.map(linkPromos, function (category){
-            return Promise.map(category, function (page) {
-                return Promise.map(page, function (url){
-                    getPage(url).then(function ($){
-                        imageUrl = baseUrl+$(".keteranganinside img")[0].attribs.src;
-                        period_class = $(".periode b").text();
-                        console.log(period_class);
-                        area = $(".periode b").text();
-            
-                        result = {'imageUrl' : imageUrl,
-                            'period_class': period_class, 
-                            'area': area
-                        }
-                        console.log(result);
-                        return result;
+        return Promise.map(page, function (url, idx, length){
+            getPage(url).then(function ($){
+                imageUrl = baseUrl+$(".keteranganinside img")[0].attribs.src;
+                period_class = $(".periode b").text();
+                console.log(period_class);
+                area = $(".periode b").text();
+    
+                result = {'imageUrl' : imageUrl,
+                    'period_class': period_class, 
+                    'area': area
+                }
+                console.log(result);
+                return result;
+                }).then(function(result){
+                    writeResultJson(result);
+                }).then(function (){
+                    if (idx < length-1){
+                        writeResult(",")
+                    }
                 })
-                })
-            }
-        ).catch(function(reason) {
-        console.log('Handle rejected promise ('+reason+') here.');
-    })
-})
+            })
+            .then(function (){
+                writeResult("}")
+            })
+            .catch(function(reason) {
+                console.log('Handle rejected promise ('+reason+') here.');
+            });
 }
 
 // categories = [link to every categories]
