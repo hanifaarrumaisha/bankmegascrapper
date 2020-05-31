@@ -97,6 +97,14 @@ getTotalPage = ($) => {
     return totalPage;
 }
 
+validateRouteDetailPromo = (route) => {
+    // promo_detail.php?id=1828
+    pattern = /promo.+/
+    route = route.match(pattern)[0];
+    console.log(route);
+    return route;
+}
+
 var getLinkPages = (linkSubcategories) => {
         return Promise.map(linkSubcategories, function(val){
             console.log(val.link)
@@ -118,8 +126,10 @@ var getLinkPromos = (linkSubcategories) => {
         tmp = _.range(sub.totalPage);
         return Promise.map(tmp, function (idx){
             idx +=1;
-            getPage(sub.link+"&page="+idx).then(getLinkPromo).then(getDetailPromo)
-        });
+            getPage(sub.link+"&page="+idx).then(getLinkPromo).then(getDetailPromo).catch(function(reason) {
+                console.log('Handle rejected promise ('+reason+') here.');
+            });
+        }, {concurrency: 2});
 })}
 
 var getLinkPromo = ($) => {
@@ -129,6 +139,7 @@ var getLinkPromo = ($) => {
     tmp = _.range(target.length);
     return Promise.map(tmp, function (idx){
         href = target[idx].attribs.href;
+        href = validateRouteDetailPromo(href);
         url = "https://www.bankmega.com/"+href;
         return url;
     })
@@ -146,18 +157,18 @@ getDetailPromo = (linkPromos) => {
                 'period_class': period_class, 
                 'area': area
             };
-            console.log(detail);
+            // console.log(detail);
             return detail;
-    })}).catch(function(reason) {
+    }).catch(function(reason) {
+        console.log('Handle rejected promise ('+reason+') here.');
+    }), {concurrency: 3}}).catch(function(reason) {
         console.log('Handle rejected promise ('+reason+') here.');
     })
 }
 
-// categories = [link to every categories]
 getPage(baseUrl).then(getLinkCreditCard).then(getPageCreditCard).then(writeResult).then(getLinkSubcategory)
     .then(getLinkPages)
     .then(getLinkPromos)
-    .then(function (val){console.log(val)})
     .catch(function(reason) {
         console.log('Handle rejected promise ('+reason+') here.');
     });
